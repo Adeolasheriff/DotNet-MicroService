@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-depl  # Changed from mssql-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres     # Changed from mssql
+  template:
+    metadata:
+      labels:
+        app: postgres   # Changed from mssql
+    spec:
+      containers:
+        - name: postgres  # Changed from mssql
+          image: postgres:13  # PostgreSQL image instead of MSSQL
+          ports:
+            - containerPort: 5432    # PostgreSQL default port instead of 1433
+          env:
+          - name: POSTGRES_PASSWORD  # PostgreSQL equivalent of SA_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret  # Changed from mssql
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_USER      # Additional PostgreSQL config
+            value: "postgres"
+          - name: POSTGRES_DB        # Additional PostgreSQL config
+            value: "platformdb"
+          volumeMounts:
+          - mountPath: /var/lib/postgresql/data  # PostgreSQL data path
+            name: postgresdb        # Changed from mssqldb
+      volumes:
+      - name: postgresdb            # Changed from mssqldb
+        persistentVolumeClaim:
+          claimName: postgres-claim # Changed from mssql-claim
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-clusterip-srv  # Changed from mssql-clusterip-srv
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres               # Changed from mssql
+  ports:
+  - name: postgres              # Changed from mssql
+    protocol: TCP
+    port: 5432                  # PostgreSQL port
+    targetPort: 5432            # PostgreSQL port
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-loadbalancer   # Changed from mssql-loadbalancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: postgres               # Changed from mssql
+  ports:
+  - protocol: TCP
+    port: 5432                  # PostgreSQL port
+    targetPort: 5432            # PostgreSQL port
